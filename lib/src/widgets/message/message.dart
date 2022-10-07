@@ -29,8 +29,8 @@ class Message extends StatelessWidget {
     required this.emojiEnlargementBehavior,
     this.fileMessageBuilder,
     required this.hideBackgroundOnEmojiMessages,
+    this.imageHeaders,
     this.imageMessageBuilder,
-    required this.isTextMessageTextSelectable,
     required this.message,
     required this.messageWidth,
     this.nameBuilder,
@@ -92,12 +92,12 @@ class Message extends StatelessWidget {
   /// Hide background for messages containing only emojis.
   final bool hideBackgroundOnEmojiMessages;
 
+  /// See [Chat.imageHeaders].
+  final Map<String, String>? imageHeaders;
+
   /// Build an image message inside predefined bubble.
   final Widget Function(types.ImageMessage, {required int messageWidth})?
       imageMessageBuilder;
-
-  /// See [TextMessage.isTextMessageTextSelectable].
-  final bool isTextMessageTextSelectable;
 
   /// Any message type.
   final types.Message message;
@@ -288,6 +288,7 @@ class Message extends StatelessWidget {
           UserAvatar(
             author: message.author,
             bubbleRtlAlignment: bubbleRtlAlignment,
+            imageHeaders: imageHeaders,
             onAvatarTap: onAvatarTap,
           )
       : const SizedBox(width: 40);
@@ -336,7 +337,11 @@ class Message extends StatelessWidget {
         final imageMessage = message as types.ImageMessage;
         return imageMessageBuilder != null
             ? imageMessageBuilder!(imageMessage, messageWidth: messageWidth)
-            : ImageMessage(message: imageMessage, messageWidth: messageWidth);
+            : ImageMessage(
+                imageHeaders: imageHeaders,
+                message: imageMessage,
+                messageWidth: messageWidth,
+              );
       case types.MessageType.text:
         final textMessage = message as types.TextMessage;
         return textMessageBuilder != null
@@ -348,7 +353,6 @@ class Message extends StatelessWidget {
             : TextMessage(
                 emojiEnlargementBehavior: emojiEnlargementBehavior,
                 hideBackgroundOnEmojiMessages: hideBackgroundOnEmojiMessages,
-                isTextMessageTextSelectable: isTextMessageTextSelectable,
                 message: textMessage,
                 nameBuilder: nameBuilder,
                 onPreviewDataFetched: onPreviewDataFetched,
