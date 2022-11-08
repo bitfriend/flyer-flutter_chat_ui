@@ -1,5 +1,4 @@
 import 'package:diffutil_dart/diffutil.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_chat_types/flutter_chat_types.dart' as types;
 
@@ -14,17 +13,22 @@ class ChatList extends StatefulWidget {
   /// Creates a chat list widget.
   const ChatList({
     super.key,
+    this.bottomWidget,
+    required this.bubbleRtlAlignment,
     this.isLastPage,
     required this.itemBuilder,
     required this.items,
-    required this.bubbleRtlAlignment,
     this.keyboardDismissBehavior = ScrollViewKeyboardDismissBehavior.manual,
     this.onEndReached,
     this.onEndReachedThreshold,
     required this.scrollController,
     this.scrollPhysics,
     this.typingIndicatorOptions,
+    required this.useTopSafeAreaInset,
   });
+
+  /// A custom widget at the bottom of the list.
+  final Widget? bottomWidget;
 
   /// Used to set alignment of typing indicator.
   /// See [BubbleRtlAlignment].
@@ -66,6 +70,9 @@ class ChatList extends StatefulWidget {
   /// See [TypingIndicatorOptions].
   final TypingIndicatorOptions? typingIndicatorOptions;
 
+  /// Whether to use top safe area inset for the list.
+  final bool useTopSafeAreaInset;
+
   @override
   State<ChatList> createState() => _ChatListState();
 }
@@ -77,9 +84,9 @@ class _ChatListState extends State<ChatList>
     curve: Curves.easeOutQuad,
     parent: _controller,
   );
-  bool _indicatorOnScrollStatus = false;
   late final AnimationController _controller = AnimationController(vsync: this);
 
+  bool _indicatorOnScrollStatus = false;
   bool _isNextPageLoading = false;
   final GlobalKey<PatchedSliverAnimatedListState> _listKey =
       GlobalKey<PatchedSliverAnimatedListState>();
@@ -153,6 +160,21 @@ class _ChatListState extends State<ChatList>
           physics: widget.scrollPhysics,
           reverse: true,
           slivers: [
+            if (widget.bottomWidget != null)
+              SliverToBoxAdapter(child: widget.bottomWidget),
+            SliverPadding(
+              padding: const EdgeInsets.only(bottom: 4),
+              sliver: SliverToBoxAdapter(
+                child: widget.typingIndicatorOptions?.customTypingIndicator ??
+                    TypingIndicator(
+                      bubbleAlignment: widget.bubbleRtlAlignment,
+                      options: widget.typingIndicatorOptions!,
+                      showIndicator: (widget
+                              .typingIndicatorOptions!.typingUsers.isNotEmpty &&
+                          !_indicatorOnScrollStatus),
+                    ),
+              ),
+            ),
             SliverPadding(
               padding: const EdgeInsets.only(bottom: 4),
               sliver: SliverToBoxAdapter(
@@ -188,7 +210,10 @@ class _ChatListState extends State<ChatList>
             ),
             SliverPadding(
               padding: EdgeInsets.only(
-                top: 16 + (kIsWeb ? 0 : MediaQuery.of(context).padding.top),
+                top: 16 +
+                    (widget.useTopSafeAreaInset
+                        ? MediaQuery.of(context).padding.top
+                        : 0),
               ),
               sliver: SliverToBoxAdapter(
                 child: SizeTransition(
@@ -299,7 +324,7 @@ class _ChatListState extends State<ChatList>
         final message = item['message']! as types.Message;
 
         // Compare items to fire only on newly added messages.
-        if (oldMessage != message) {
+        if (oldMessage.id != message.id) {
           // Run only for sent message.
           if (message.author.id == InheritedUser.of(context).user.id) {
             // Delay to give some time for Flutter to calculate new
